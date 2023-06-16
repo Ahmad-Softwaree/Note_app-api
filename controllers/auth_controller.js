@@ -7,7 +7,8 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
 const { JWT_SECRET } = process.env;
-export const registerRouter = async (req, res) => {
+
+export const register = async (req, res) => {
   let errors = catchRequires(req.body);
   if (errors.length > 0) return res.status(400).json(errors);
   let salt = await bcrypt.genSalt(16);
@@ -25,7 +26,7 @@ export const registerRouter = async (req, res) => {
   }
 };
 
-export const loginRouter = async (req, res) => {
+export const login = async (req, res) => {
   let errors = catchRequires(req.body);
   if (errors.length > 0) return res.status(400).json(errors);
   try {
@@ -56,6 +57,24 @@ export const getUserAuth = async (req, res) => {
       if (error) return res.status(400).json({ error });
       if (result.length === 0) return res.status(400).json({ error: "user not found" });
       return res.status(200).json(result[0]);
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateUser = async (req, res) => {
+  try {
+    let errors = catchRequires(req.body);
+    if (errors.length > 0) return res.status(400).json(errors);
+    const { query, values } = sqlQuery(`UPDATE users SET name = ?, image = ? WHERE id = ?`, { ...req.body, id: req.user });
+    db.query(query, values, (error, result) => {
+      if (error) return res.status(400).json({ error });
+      var { query, values } = sqlQuery(`SELECT * FROM users WHERE id = ?`, { id: req.user });
+      db.query(query, values, (secondErr, secondRes) => {
+        if (secondErr) return res.status({ error: secondErr });
+        return res.status(200).json(secondRes[0]);
+      });
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
